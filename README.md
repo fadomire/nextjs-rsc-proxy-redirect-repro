@@ -49,9 +49,14 @@ curl -sI -H 'RSC: 1' 'http://localhost:3999/target'
 ```
 ```
 HTTP/1.1 307 Temporary Redirect
-cache-control: public, max-age=60       ← inherited from the app's own headers
+cache-control: public, max-age=60       ← the app's header, not one Next sets
 location: /target?_rsc                  ← and no Vary header at all
 ```
+
+Where each header comes from: remove the `Cache-Control` line from `proxy.ts` and the same 307 is emitted with
+**no `Cache-Control` at all** (still no `Vary`), while the page itself answers `Cache-Control: s-maxage=31536000`.
+Next does not mark the correction redirect public — it lets the application's response headers apply to it, and a
+blanket `Cache-Control` set from proxy/middleware is a common pattern for CDN-fronted apps.
 
 Every normal response in this app does carry the variance information:
 
@@ -70,8 +75,9 @@ navigations are answered `307 → /page?_rsc=<hash>`, which is where RSC payload
 blank page rendering the Flight payload, with `?_rsc=` in the address bar.
 
 `validateRSCRequestHeaders` therefore does not remove the poisoning on this class of CDN, it changes its shape.
-The redirect is arguably worse than the payload it replaces: carrying no `Vary` at all, it is stored
-unpartitioned even by caches that honour `Vary`.
+And carrying no `Vary` at all — unlike the payload response it replaces — the redirect is stored unpartitioned
+even by caches that honour `Vary`, once the app's own `Cache-Control` makes it storable (a bare 307 with no
+freshness directives is not heuristically cacheable, so that header is what opens the door).
 
 Seen in production (Next 16.2.6, App Router, `output: 'standalone'`, Akamai + nginx, both keying on URL only):
 intermittent blank pages showing the RSC payload, and ~1,000 RUM page views over 30 days whose top-level URL
@@ -81,8 +87,9 @@ contains `?_rsc=<hash>`.
 
 1. Carry `_rsc` forward on redirects returned from proxy/middleware, as the rewrite branch already does — or
    expose the hash / the RSC-request flag to proxy code.
-2. Emit the validation 307 as `Cache-Control: private, no-store` (it is a per-request correction, not a
-   resource), and/or with the same `Vary` as the responses it guards.
+2. Have the validation 307 set its own `Cache-Control: private, no-store` instead of inheriting the
+   application's response headers (it is a per-request correction, not a resource), and/or carry the same `Vary`
+   as the responses it guards. A guard against caches that ignore `Vary` should not be storable by them.
 
 ## Related
 
