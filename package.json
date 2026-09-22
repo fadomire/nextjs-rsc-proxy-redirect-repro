@@ -1,0 +1,13 @@
+{
+  "name": "nextjs-rsc-proxy-redirect-repro",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "start": "next start -p 3999"
+  },
+  "dependencies": {
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  }
+}
