@@ -4,7 +4,7 @@ Minimal reproduction, built from
 [`reproduction-template`](https://github.com/vercel/next.js/tree/canary/examples/reproduction-template).
 Three pages, one `proxy.ts`, and a single `next.config` redirect used only as a comparison.
 
-Verified on **16.4.0-canary.46**, and on **16.3.4**.
+Verified on **16.4.0-canary.46** (`next dev` and `next start`), and on **16.3.4**.
 
 ## Run
 
