@@ -2,7 +2,7 @@
 
 Minimal reproduction, built from
 [`reproduction-template`](https://github.com/vercel/next.js/tree/canary/examples/reproduction-template).
-Default config, three pages, one `proxy.ts`.
+Three pages, one `proxy.ts`, and a single `next.config` redirect used only as a comparison.
 
 Verified on **16.4.0-canary.46**, and on **16.3.4**.
 
@@ -44,6 +44,26 @@ curl -sI -H 'RSC: 1' 'http://localhost:3000/rewrite-source?_rsc=abc123'
 ```
 x-middleware-rewrite: /target?_rsc=abc123  ← preserved
 ```
+
+## B2. The same redirect declared in `next.config` keeps it too
+
+```ts
+// next.config.ts
+redirects: async () => [{ source: "/config-redirect-source", destination: "/target", permanent: false }]
+```
+
+```bash
+curl -sI -H 'RSC: 1' 'http://localhost:3000/config-redirect-source?_rsc=abc123'
+```
+```
+HTTP/1.1 307 Temporary Redirect
+location: /target?_rsc=abc123            ← preserved
+```
+
+So within the same app, a redirect keeps `_rsc` when it comes from `next.config` and loses it when it comes
+from `proxy.ts`.
+
+## Where it happens
 
 `server/web/adapter.ts` re-appends `_rsc` after a rewrite and has no equivalent
 in the redirect branch below it, although `rscHash` is still in scope there.
